@@ -11,45 +11,87 @@
   <div class="bg-white p-8 rounded shadow-md w-96">
     <h1 class="text-2xl font-semibold mb-4">Create Calendar Event</h1>
 
-    <form>
+    <form id="eventForm">
       <div class="mb-4">
         <label for="imageUpload" class="block text-white-700 text-sm font-bold mb-2">
           Upload Image (Optional):
         </label>
-        <input type="file" id="imageUpload" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+        <input type="file" id="imageUpload" name="image" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
       </div>
 
       <div class="mb-4">
         <label for="manualDate" class="block text-gray-700 text-sm font-bold mb-2">
           Enter Date Manually:
         </label>
-        <input type="date" id="manualDate" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+        <input type="date" id="manualDate" name="date" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
       </div>
 
       <div class="mb-6">
         <label for="taskDescription" class="block text-gray-700 text-sm font-bold mb-2">
           Task Description:
         </label>
-        <textarea id="taskDescription" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="Enter task description"></textarea>
+        <textarea id="taskDescription" name="description" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="Enter task description"></textarea>
       </div>
 
       <div class="flex items-center justify-between">
-        <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="button">
+        <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">
           Add to Calendar
         </button>
       </div>
     </form>
+    <a href="http://localhost:5000/api/authenticate">Authenticate with Google Calendar</a>
   </div>
 
   <script>
-    const manualDateInput = document.getElementById('manualDate');
-
-    manualDateInput.addEventListener('change', function() {
-      const selectedDate = manualDateInput.value;
-      console.log('Selected date:', selectedDate); // For debugging
-
-      // You can display the selected date in another element if you want
-      // document.getElementById('displayDate').textContent = selectedDate;
+    document.addEventListener('DOMContentLoaded', async function() {
+      const form = document.getElementById('eventForm');
+  
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+  
+        const imageInput = document.getElementById('imageUpload');
+        const manualDateInput = document.getElementById('manualDate');
+        const taskDescriptionInput = document.getElementById('taskDescription');
+  
+        const imageFile = imageInput.files[0];
+        const manualDate = manualDateInput.value;
+        const taskDescription = taskDescriptionInput.value;
+  
+        const formData = new FormData();
+        if (imageFile) {
+          formData.append('image', imageFile);
+        }
+  
+        formData.append('date', manualDate);
+        formData.append('description', taskDescription);
+  
+        try {
+          const response = await fetch('http://127.0.0.1:5000/api/create_event', {
+            method: 'POST',
+            body: formData,
+          });
+  
+          if (response.ok) {
+            const data = await response.json();
+            console.log('Success:', data);
+            alert('Event added successfully!');
+          } else {
+            console.error('Error:', response.status);
+            alert('Error adding event: ' + response.statusText);
+          }
+        } catch (error) {
+          console.error('Network error:', error);
+          alert('Network error: ' + error.message);
+        }
+      });
+  
+      const manualDateInput = document.getElementById('manualDate');
+      console.log("manualDateInput:", manualDateInput); // ADD THIS LINE
+      
+      manualDateInput.addEventListener('change', function() {
+        const selectedDate = manualDateInput.value;
+        console.log('Selected date:', selectedDate);
+      });
     });
   </script>
 
