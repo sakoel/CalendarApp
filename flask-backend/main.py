@@ -9,6 +9,9 @@ import datetime
 from google_auth_oauthlib.flow import Flow
 import os
 
+# TO ACTIVATE VENV:  source venv/bin/activate (Linux/Mac) or venv\Scripts\activate (Windows)
+# TO DEACTIVATE VENV:  deactivate
+
 app = Flask(__name__)
 CORS(app)
 app.secret_key = "super secret key"  # Change this in a real application!
