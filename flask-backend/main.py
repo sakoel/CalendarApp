@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, redirect, url_for, session
 from flask_cors import CORS
-import pytesseract
+import pysseract
 from PIL import Image
 import re
 from googleapiclient.discovery import build
@@ -17,7 +17,7 @@ CORS(app)
 app.secret_key = "super secret key"  # Change this in a real application!
 
 # Configure Tesseract (replace with your actual path)
-pytesseract.pytesseract.tesseract_cmd = r'/usr/bin/tesseract'
+pysseract.tesseract_cmd = r'/usr/bin/tesseract'
 
 # OAuth 2.0 Configuration
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -133,7 +133,7 @@ def create_event():
                 img = Image.open("temp_image.jpg")
 
                 # Perform OCR
-                text = pytesseract.image_to_string(img)
+                text = pysseract.image_to_string(img)
                 print(f"OCR Output: {text}")
 
                 # Extract Date (using regex - adjust as needed)
