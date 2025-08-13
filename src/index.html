@@ -42,7 +42,7 @@
 
       <div class="flex items-center justify-center mb-4">
         <button id="calendarBtn"
-          class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          class="cursor-pointer bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
           type="button">
           Authenticate with Google Calendar
         </button>
@@ -50,7 +50,7 @@
 
       <div class="flex items-center justify-center">
         <button id="logoutBtn"
-          class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          class="cursor-pointer bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
           type="button">
           Logout
         </button>
@@ -109,6 +109,7 @@
             // Redirect to frontend after logout
             window.location.href = "/";
           });
+        form.reset();
       });
 
       // Handle form submission when authenticated
@@ -147,6 +148,7 @@
             const data = await response.json();
             console.log('Success:', data);
             alert('Event added successfully!');
+            form.reset();
           } else {
             console.error('Error:', response.status);
             alert('Error adding event: ' + response.statusText);
