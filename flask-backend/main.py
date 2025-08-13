@@ -25,7 +25,7 @@ pytesseract.pytesseract.tesseract_cmd = r'/usr/bin/tesseract'
 script_dir = os.path.dirname(os.path.abspath(__file__))
 CLIENT_SECRETS_FILE = os.path.join(script_dir, 'client_secret.json')
 SCOPES = ['https://www.googleapis.com/auth/calendar']
-REDIRECT_URI = '/oauth2callback'
+REDIRECT_URI = 'https://calendarapp-9jvu.onrender.com/oauth2callback'
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://calendar-app-henna-five.vercel.app/")
 
 def get_flow(redirect_uri):
