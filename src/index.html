@@ -8,7 +8,7 @@
 </head>
 <body class="bg-gray-100 h-screen flex items-center justify-center">
 
-  <div class="bg-white p-8 rounded shadow-md w-96">
+  <div class="bg-white p-8 rounded shadow-md w-96 items-center justify-center">
     <h1 class="text-2xl font-semibold mb-4">Create Calendar Event</h1>
 
     <form id="eventForm">
@@ -26,6 +26,13 @@
         <input type="date" id="manualDate" name="date" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
       </div>
 
+      <div class="mb-4">
+        <label for="manualTimelass" class="block text-gray-700 text-sm font-bold mb-2">
+          Enter Time
+        </label>
+        <input type="time" id="manualTime" name="time" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="Select time" title="Enter the event time">
+      </div>
+
       <div class="mb-6">
         <label for="taskDescription" class="block text-gray-700 text-sm font-bold mb-2">
           Task Description:
@@ -33,44 +40,109 @@
         <textarea id="taskDescription" name="description" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="Enter task description"></textarea>
       </div>
 
-      <div class="flex items-center justify-between">
-        <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">
-          Add to Calendar
+      <div class="flex items-center justify-center mb-4">
+        <button id="calendarBtn"
+          class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          type="button">
+          Authenticate with Google Calendar
+        </button>
+      </div>
+
+      <div class="flex items-center justify-center">
+        <button id="logoutBtn"
+          class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          type="button">
+          Logout
         </button>
       </div>
     </form>
-    <a href="http://localhost:5000/api/authenticate">Authenticate with Google Calendar</a>
+
   </div>
 
   <script>
     document.addEventListener('DOMContentLoaded', async function() {
       const form = document.getElementById('eventForm');
-  
+      const calendarBtn = document.getElementById('calendarBtn');
+
+      // Check for ?authenticated=true in the URL
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('authenticated') === 'true') {
+        localStorage.setItem('authenticated', 'true');
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+
+      function setToAddEventMode() {
+        calendarBtn.textContent = "Add to Calendar";
+        calendarBtn.disabled = false;
+        calendarBtn.classList.remove('bg-gray-500', 'hover:bg-gray-600');
+        calendarBtn.classList.add('bg-blue-500', 'hover:bg-blue-600');
+        calendarBtn.type = "submit";
+      }
+
+      function setToAuthMode() {
+        calendarBtn.textContent = "Authenticate with Google Calendar";
+        calendarBtn.disabled = false;
+        calendarBtn.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+        calendarBtn.classList.add('bg-gray-500', 'hover:bg-gray-600');
+        calendarBtn.type = "button";
+      }
+
+      // Set button mode based on authentication
+      if (localStorage.getItem('authenticated') === 'true') {
+        setToAddEventMode();
+      } else {
+        setToAuthMode();
+      }
+
+      // Handle button click when not authenticated
+      calendarBtn.addEventListener('click', function() {
+        if (calendarBtn.type === "button") {
+          window.location.href = "http://localhost:5000/api/authenticate";
+        }
+      });
+
+      logoutBtn.addEventListener('click', function() {
+        localStorage.removeItem('authenticated');
+        setToAuthMode();
+        fetch("http://localhost:5000/api/logout", { method: "POST" })
+          .then(res => {
+            // Redirect to frontend after logout
+            window.location.href = "/";
+          });
+      });
+
+      // Handle form submission when authenticated
       form.addEventListener('submit', async (event) => {
+        if (calendarBtn.type !== "submit") {
+          event.preventDefault();
+          return;
+        }
         event.preventDefault();
-  
+
         const imageInput = document.getElementById('imageUpload');
         const manualDateInput = document.getElementById('manualDate');
         const taskDescriptionInput = document.getElementById('taskDescription');
-  
+        const manualTimeInput = document.getElementById('manualTime');
+
         const imageFile = imageInput.files[0];
         const manualDate = manualDateInput.value;
         const taskDescription = taskDescriptionInput.value;
-  
+        const manualTime = manualTimeInput.value;
+
         const formData = new FormData();
         if (imageFile) {
           formData.append('image', imageFile);
         }
-  
+
         formData.append('date', manualDate);
         formData.append('description', taskDescription);
-  
+        formData.append('time', manualTime);
         try {
           const response = await fetch('http://127.0.0.1:5000/api/create_event', {
             method: 'POST',
             body: formData,
           });
-  
+
           if (response.ok) {
             const data = await response.json();
             console.log('Success:', data);
@@ -84,15 +156,7 @@
           alert('Network error: ' + error.message);
         }
       });
-  
-      const manualDateInput = document.getElementById('manualDate');
-      console.log("manualDateInput:", manualDateInput); // ADD THIS LINE
-      
-      manualDateInput.addEventListener('change', function() {
-        const selectedDate = manualDateInput.value;
-        console.log('Selected date:', selectedDate);
-      });
-    });
+    }); 
   </script>
 
 </body>
