@@ -26,7 +26,7 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 CLIENT_SECRETS_FILE = os.path.join(script_dir, 'client_secret.json')
 SCOPES = ['https://www.googleapis.com/auth/calendar']
 REDIRECT_URI = '/oauth2callback'
-FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000/src/index.html?authenticated=true")
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://calendar-app-henna-five.vercel.app/")
 
 def get_flow(redirect_uri):
     return Flow.from_client_secrets_file(
@@ -62,7 +62,7 @@ def oauth2callback():
         return jsonify({"error": "Could not save token.json, but calendar may still work."})
     session['credentials'] = creds.to_json()
     # Redirect to your frontend after authentication
-    return redirect(FRONTEND_URL)
+    return redirect(FRONTEND_URL + "?authenticated=true")
 
 def load_credentials():
     try:
