@@ -183,6 +183,6 @@ def create_event():
         }), 500
 
 if __name__ == '__main__':
-    # For local development only: allow HTTP for OAuth2
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
-    app.run(debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=True)
