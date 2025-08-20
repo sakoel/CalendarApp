@@ -134,53 +134,20 @@ def logout():
 def create_event():
     creds = load_credentials()
     if not creds:
-        return jsonify({
-            'message': 'Event creation request failed!',
-            'error': "Could not authenticate with Google Calendar. Please authenticate first by going to /api/authenticate"
-        }), 401
+        return jsonify({'error': 'User not authenticated'}), 401
 
-    # Handle image upload and OCR
-    date = None
-    if 'image' in request.files:
-        image = request.files['image']
-        if image.filename != '':
-            try:
-                image.save("temp_image.jpg")
-                img = Image.open("temp_image.jpg")
-                text = pytesseract.image_to_string(img)
-                print(f"OCR Output: {text}")
-                date_match = re.search(r'\d{4}-\d{2}-\d{2}', text)
-                if date_match:
-                    date = date_match.group(0)
-                else:
-                    date = request.form.get('date')
-                    print("Date not found in OCR output - using manual date")
-            except Exception as e:
-                print(f"Error processing image: {e}")
-                date = request.form.get('date')
-                print("Image processing error - using manual date")
-        else:
-            date = request.form.get('date')
-    else:
-        date = request.form.get('date')
-
-    description = request.form.get('description')
-    print(f"Received date: {date}")
-    print(f"Received description: {description}")
-
-    success, result = create_calendar_event(date, description, creds)
-    if success:
-        return jsonify({
-            'message': 'Event creation request received!',
-            'date': date,
-            'description': description,
-            "calendar_link": result
-        }), 200
-    else:
-        return jsonify({
-            'message': 'Event creation request failed!',
-            'error': result
-        }), 500
+    try:
+        service = build('calendar', 'v3', credentials=creds)
+        event = {
+            'summary': request.form.get('description'),
+            'start': {'dateTime': f"{request.form.get('date')}T{request.form.get('time')}:00"},
+            'end': {'dateTime': f"{request.form.get('date')}T{request.form.get('time')}:00"},
+        }
+        event = service.events().insert(calendarId='primary', body=event).execute()
+        return jsonify({'success': True, 'eventLink': event.get('htmlLink')})
+    except Exception as e:
+        print(f"Error creating event: {e}")
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
