@@ -14,7 +14,7 @@ import json
 # --- Configuration ---
 app = Flask(__name__)
 CORS(app)
-app.secret_key = "super secret key"  # Change this in production!
+app.secret_key = os.environ.get("SECRET_KEY", "default-secret-key")
 
 # Tesseract OCR path (update for Windows if needed)
 pytesseract.pytesseract.tesseract_cmd = r'/usr/bin/tesseract'
@@ -23,13 +23,13 @@ pytesseract.pytesseract.tesseract_cmd = r'/usr/bin/tesseract'
 
 # OAuth2 Configuration
 script_dir = os.path.dirname(os.path.abspath(__file__))
-CLIENT_SECRETS_FILE = os.path.join(script_dir, 'client_secret.json')
+CLIENT_SECRETS_FILE = json.loads(os.environ.get("CLIENT_SECRET_JSON"))
 SCOPES = ['https://www.googleapis.com/auth/calendar']
-REDIRECT_URI = 'https://calendarapp-9jvu.onrender.com/oauth2callback'
+REDIRECT_URI = '/oauth2callback'
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://calendar-app-henna-five.vercel.app/")
 
 def get_flow(redirect_uri):
-    return Flow.from_client_secrets_file(
+    return Flow.from_client_sec(
         CLIENT_SECRETS_FILE,
         scopes=SCOPES,
         redirect_uri=redirect_uri
