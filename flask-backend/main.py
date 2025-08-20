@@ -65,19 +65,11 @@ def oauth2callback():
     return redirect(FRONTEND_URL + "?authenticated=true")
 
 def load_credentials():
-    try:
-        with open('token.json', 'r') as f:
-            token_data = f.read()
-        creds = credentials.Credentials.from_authorized_user_info(
-            info=eval(token_data), scopes=SCOPES
-        )
+    if os.path.exists('token.json'):
+        with open('token.json', 'r') as token:
+            creds = credentials.Credentials.from_authorized_user_info(json.load(token), SCOPES)
         return creds
-    except FileNotFoundError:
-        print("Error: token.json file not found. Please authenticate with Google Calendar API.")
-        return None
-    except Exception as e:
-        print(f"Error loading credentials: {e}")
-        return None
+    return None  # Return None if token.json is missing
 
 def create_calendar_event(date, description, creds):
     try:
