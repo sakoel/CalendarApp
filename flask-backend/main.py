@@ -29,7 +29,7 @@ REDIRECT_URI = '/oauth2callback'
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://calendar-app-henna-five.vercel.app/")
 
 def get_flow(redirect_uri):
-    return Flow.from_client_sec(
+    return Flow.from_client_config(
         CLIENT_SECRETS_FILE,
         scopes=SCOPES,
         redirect_uri=redirect_uri
