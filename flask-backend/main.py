@@ -35,17 +35,21 @@ def get_flow(redirect_uri):
         redirect_uri=redirect_uri
     )
 
-@app.route('/api/authenticate')
+@app.route('/api/authenticate', methods=['GET'])
 def authenticate():
-    redirect_uri = url_for('oauth2callback', _external=True)
-    flow = get_flow(redirect_uri)
-    authorization_url, state = flow.authorization_url(
-        access_type='offline',
-        include_granted_scopes='true'
-    )
-    session['state'] = state
-    print(f"Authorization URL: {authorization_url}")
-    return redirect(authorization_url)
+    try:
+        redirect_uri = url_for('oauth2callback', _external=True)
+        flow = get_flow(redirect_uri)
+        authorization_url, state = flow.authorization_url(
+            access_type='offline',  # Request offline access
+            prompt='consent',       # Force re-authentication
+            include_granted_scopes='true'
+        )
+        session['state'] = state
+        return redirect(authorization_url)
+    except Exception as e:
+        print(f"Error during authentication: {e}")
+        return jsonify({'error': 'Authentication failed!'}), 500
 
 @app.route(REDIRECT_URI)
 def oauth2callback():
