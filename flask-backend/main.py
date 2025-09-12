@@ -108,12 +108,16 @@ def create_event():
         return jsonify({'error': 'User not authenticated'}), 401
 
     try:
+        print("description:", request.form.get('description'))
+        print("date:", request.form.get('date'))
+        print("time:", request.form.get('time'))
         service = build('calendar', 'v3', credentials=creds)
         event = {
             'summary': request.form.get('description'),
             'start': {'dateTime': f"{request.form.get('date')}T{request.form.get('time')}:00"},
             'end': {'dateTime': f"{request.form.get('date')}T{request.form.get('time')}:00"},
         }
+        print("event:", event)
         event = service.events().insert(calendarId='primary', body=event).execute()
         return jsonify({'success': True, 'eventLink': event.get('htmlLink')})
     except Exception as e:
