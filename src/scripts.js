@@ -1,4 +1,4 @@
- document.addEventListener('DOMContentLoaded', async function() {
+document.addEventListener('DOMContentLoaded', async function() {
       const form = document.getElementById('eventForm');
       const calendarBtn = document.getElementById('calendarBtn');
 
@@ -51,49 +51,33 @@
       });
 
       // Handle form submission when authenticated
-      form.addEventListener('submit', async (event) => {
-        if (calendarBtn.type !== "submit") {
-          event.preventDefault();
-          return;
-        }
+      form.addEventListener('submit', async function(event) {
         event.preventDefault();
 
-        const imageInput = document.getElementById('imageUpload');
-        const manualDateInput = document.getElementById('manualDate');
-        const taskDescriptionInput = document.getElementById('taskDescription');
-        const manualTimeInput = document.getElementById('manualTime');
+        const formData = new FormData(form);
 
-        const imageFile = imageInput.files[0];
-        const manualDate = manualDateInput.value;
-        const taskDescription = taskDescriptionInput.value;
-        const manualTime = manualTimeInput.value;
-
-        const formData = new FormData();
-        if (imageFile) {
-          formData.append('image', imageFile);
-        }
-
-        formData.append('date', manualDate);
-        formData.append('description', taskDescription);
-        formData.append('time', manualTime);
         try {
           const response = await fetch('https://calendarapp-9jvu.onrender.com/api/create_event', {
             method: 'POST',
             body: formData,
           });
 
-          if (response.ok) {
-            const data = await response.json();
-            console.log('Success:', data);
-            alert('Event added successfully!');
-            form.reset();
-          } else {
-            console.error('Error:', response.status);
-            alert('Error adding event: ' + response.statusText);
+          const data = await response.json();
+
+          if (!response.ok) {
+            // Log error details to the console
+            console.error('Create Event Error:', data.error || response.statusText);
+            alert('Error adding event: ' + (data.error || response.statusText));
+            return;
           }
-        } catch (error) {
-          console.error('Network error:', error);
-          alert('Network error: ' + error.message);
+
+          // Success
+          console.log('Event created:', data);
+          alert('Event created successfully!');
+        } catch (err) {
+          // Network or unexpected error
+          console.error('Network or unexpected error:', err);
+          alert('Network error: ' + err.message);
         }
       });
-    }); 
+    });
