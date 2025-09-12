@@ -89,7 +89,9 @@ document.addEventListener('DOMContentLoaded', async function () {
                 console.log('Success:', data);
                 alert('Event added successfully!');
                 form.reset();
-
+                // Show success message
+                const successMessage = document.getElementById('successMessage');
+                successMessage.classList.remove('hidden');
             } else {
                 console.error('Error:', response.status);
                 alert('Error adding event: ' + response.statusText);
@@ -99,56 +101,4 @@ document.addEventListener('DOMContentLoaded', async function () {
             alert('Network error: ' + error.message);
         }
     });
-
-    (function () {
-        const modal = document.getElementById('successModal');
-        const backdrop = document.getElementById('successBackdrop');
-        const okBtn = document.getElementById('successOkBtn');
-        const titleEl = document.getElementById('successTitle');
-        const messageEl = document.getElementById('successMessage');
-        let autoHideTimer = null;
-
-        function openModal({ title = 'Success!', message = 'Event was added to your calendar.', autoHide = 3000 } = {}) {
-            if (!modal) return;
-            titleEl.textContent = title;
-            messageEl.textContent = message;
-            modal.classList.remove('hidden');
-            // clear existing timer
-            if (autoHideTimer) {
-                clearTimeout(autoHideTimer);
-                autoHideTimer = null;
-            }
-            if (autoHide > 0) {
-                autoHideTimer = setTimeout(closeModal, autoHide);
-            }
-            document.addEventListener('keydown', onKeyDown);
-        }
-
-        function closeModal() {
-            if (!modal) return;
-            modal.classList.add('hidden');
-            if (autoHideTimer) {
-                clearTimeout(autoHideTimer);
-                autoHideTimer = null;
-            }
-            document.removeEventListener('keydown', onKeyDown);
-        }
-
-        function onKeyDown(e) {
-            if (e.key === 'Escape') closeModal();
-        }
-
-        backdrop.addEventListener('click', closeModal);
-        okBtn.addEventListener('click', closeModal);
-
-        // Expose global function so existing scripts can call it:
-        window.showSuccessModal = openModal;
-
-        // Also listen for a custom event "calendar-event-success" so callers can dispatch:
-        // Example: document.dispatchEvent(new CustomEvent('calendar-event-success', { detail: { message: 'Custom message' } }));
-        document.addEventListener('calendar-event-success', (e) => {
-            const detail = e && e.detail ? e.detail : {};
-            openModal({ title: detail.title || 'Success!', message: detail.message || 'Event was added to your calendar.' });
-        });
-    })();
 }); 
