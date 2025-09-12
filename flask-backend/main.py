@@ -13,7 +13,7 @@ import json
 
 # --- Configuration ---
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins=["https://calendar-app-henna-five.vercel.app"])
 app.secret_key = os.environ.get("SECRET_KEY", "default-secret-key")
 
 # Tesseract OCR path (update for Windows if needed)
@@ -74,31 +74,6 @@ def load_credentials():
             creds = credentials.Credentials.from_authorized_user_info(json.load(token), SCOPES)
         return creds
     return None  # Return None if token.json is missing
-
-def create_calendar_event(date, description, creds):
-    try:
-        service = build('calendar', 'v3', credentials=creds)
-        event_date = datetime.datetime.strptime(date, '%Y-%m-%d').date()
-        start_time = datetime.datetime.combine(event_date, datetime.time(9, 0))
-        end_time = datetime.datetime.combine(event_date, datetime.time(10, 0))
-        event = {
-            'summary': description,
-            'description': description,
-            'start': {
-                'dateTime': start_time.isoformat(),
-                'timeZone': 'America/Los_Angeles',
-            },
-            'end': {
-                'dateTime': end_time.isoformat(),
-                'timeZone': 'America/Los_Angeles',
-            },
-        }
-        event = service.events().insert(calendarId='primary', body=event).execute()
-        print(f"Event created: {event.get('htmlLink')}")
-        return True, event.get('htmlLink')
-    except Exception as e:
-        print(f"Error creating event: {e}")
-        return False, str(e)
     
 @app.route('/api/logout', methods=['POST'])
 def logout():
