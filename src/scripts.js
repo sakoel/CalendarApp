@@ -77,7 +77,6 @@ document.addEventListener('DOMContentLoaded', async function () {
         formData.append('description', taskDescription);
         formData.append('time', manualTime);
 
-        console.log(formData);
         try {
             const response = await fetch('https://calendarapp-9jvu.onrender.com/api/create_event', {
                 method: 'POST',
@@ -87,14 +86,15 @@ document.addEventListener('DOMContentLoaded', async function () {
             if (response.ok) {
                 const data = await response.json();
                 console.log('Success:', data);
-                alert('Event added successfully!');
                 form.reset();
                 // Show success message
                 const successMessage = document.getElementById('successMessage');
                 successMessage.classList.remove('hidden');
             } else {
                 console.error('Error:', response.status);
-                alert('Error adding event: ' + response.statusText);
+                const errorMessage = document.getElementById('errorMessage');
+                errorMessage.classList.remove('hidden');
+                errorMessage.textContent = 'Error adding event: ' + response.statusText;
             }
         } catch (error) {
             console.error('Network error:', error);

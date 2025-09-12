@@ -123,8 +123,8 @@ def create_event():
         event = service.events().insert(calendarId='primary', body=event).execute()
         return jsonify({'success': True, 'eventLink': event.get('htmlLink')})
     except Exception as e:
-        print(f"Error creating event: {e}")
-        return jsonify({'error': str(e)}), 500
+        print(f"Error creating event: Enter all data! {e}")
+        return jsonify({'error': 'Enter all data!'}), 500
 
 if __name__ == '__main__':
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
