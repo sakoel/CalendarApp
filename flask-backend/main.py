@@ -111,8 +111,14 @@ def create_event():
         service = build('calendar', 'v3', credentials=creds)
         event = {
             'summary': request.form.get('description'),
-            'start': {'dateTime': f"{request.form.get('date')}T{request.form.get('time')}:00"},
-            'end': {'dateTime': f"{request.form.get('date')}T{request.form.get('time')}:00"},
+            'start': {
+                'dateTime': f"{request.form.get('date')}T{request.form.get('time')}:00",
+                'timeZone': 'UTC'  # <-- Add this line
+            },
+            'end': {
+                'dateTime': f"{request.form.get('date')}T{request.form.get('time')}:00",
+                'timeZone': 'UTC'  # <-- Add this line
+            },
         }
         event = service.events().insert(calendarId='primary', body=event).execute()
         return jsonify({'success': True, 'eventLink': event.get('htmlLink')})
