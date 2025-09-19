@@ -25,6 +25,13 @@ document.addEventListener('DOMContentLoaded', async function () {
         calendarBtn.type = "button";
     }
 
+    function successMessage() {
+        const successDiv = document.createElement('div');
+        successDiv.className = 'bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative';
+        successDiv.textContent = 'Event added successfully!';
+        document.body.appendChild(successDiv);
+    }
+
     // Set button mode based on authentication
     if (localStorage.getItem('authenticated') === 'true') {
         setToAddEventMode();
@@ -88,8 +95,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                 console.log('Success:', data);
                 form.reset();
                 // Show success message
-                const successMessage = document.getElementById('successMessage');
-                successMessage.classList.remove('hidden');
+                successMessage();
             } else {
                 console.error('Error:', response.status);
                 const errorMessage = document.getElementById('errorMessage');
@@ -101,4 +107,6 @@ document.addEventListener('DOMContentLoaded', async function () {
             alert('Network error: ' + error.message);
         }
     });
-}); 
+
+    window.successMessage = successMessage;
+});
