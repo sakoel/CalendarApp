@@ -1,12 +1,11 @@
 from flask import Flask, request, jsonify, redirect, url_for, session
 from flask_cors import CORS
-import pytesseract
 from PIL import Image
+import pytesseract
 import re
 from googleapiclient.discovery import build
 from google.oauth2 import credentials
 from google_auth_oauthlib.flow import Flow
-import datetime
 import os
 import requests
 import json
@@ -95,7 +94,6 @@ def logout():
                 )
                 if revoke.status_code != 200:
                     print(f"Failed to revoke token: {revoke.text}")
-        # Just redirect to your frontend (not Google's logout)
         return redirect(FRONTEND_URL)
     except Exception as e:
         print(f"Error during logout: {e}")
@@ -109,18 +107,43 @@ def create_event():
 
     try:
         service = build('calendar', 'v3', credentials=creds)
-        event = {
-            'summary': request.form.get('description'),
-            'start': {
-                'dateTime': f"{request.form.get('date')}T{request.form.get('time')}:00",
-                'timeZone': 'UTC'  # <-- Add this line
-            },
-            'end': {
-                'dateTime': f"{request.form.get('date')}T{request.form.get('time')}:00",
-                'timeZone': 'UTC'  # <-- Add this line
-            },
-        }
-        event = service.events().insert(calendarId='primary', body=event).execute()
+        if 'image' in request.files:
+            image = Image.open(request.files['image'])
+            text = pytesseract.image_to_string(image)
+            print(f"OCR Extracted Text: {text}")
+            # Simple regex to find date and time in the format YYYY-MM-DD and HH:MM
+            date_match = re.search(r'(\d{4}-\d{2}-\d{2})', text)
+            time_match = re.search(r'(\d{2}:\d{2})', text)
+            description_match = re.search(r'Description:\s*(.*)', text)
+            if date_match and time_match and description_match:
+                date = date_match.group(1)
+                time = time_match.group(1)
+                description = description_match.group(1).strip()
+                event = {
+                    'summary': description,
+                    'start': {
+                        'dateTime': f"{date}T{time}:00",
+                        'timeZone': 'UTC'
+                    },
+                    'end': {
+                        'dateTime': f"{date}T{time}:00",
+                        'timeZone': 'UTC'
+                    },
+                }
+        # If no image, expect form data
+        else:
+            event = {
+                'summary': request.form.get('description'),
+                'start': {
+                    'dateTime': f"{request.form.get('date')}T{request.form.get('time')}:00",
+                    'timeZone': 'UTC'
+                },
+                'end': {
+                    'dateTime': f"{request.form.get('date')}T{request.form.get('time')}:00",
+                    'timeZone': 'UTC'
+                },
+            }
+        event = service.events().insert(calendarId='primary', body=event).execute() # this line makes the event
         return jsonify({'success': True, 'eventLink': event.get('htmlLink')})
     except Exception as e:
         print(f"Error creating event: Enter all data! {e}")
