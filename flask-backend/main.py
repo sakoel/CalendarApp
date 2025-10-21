@@ -16,9 +16,7 @@ from google.oauth2 import id_token as google_id_token
 from google.auth.transport import requests as google_requests
 from google.oauth2 import credentials as google_creds
 
-from werkzeug.middleware.proxy_fix import ProxyFix
-app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
-app.config.update(PREFERRED_URL_SCHEME="https")
+
 
 # --- Configuration ---
 app = Flask(__name__)
@@ -34,6 +32,10 @@ CORS(app, resources={
     }
 })
 app.secret_key = os.environ.get("SECRET_KEY", "default-secret-key")
+
+from werkzeug.middleware.proxy_fix import ProxyFix
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+app.config.update(PREFERRED_URL_SCHEME="https")
 
 # Tesseract OCR path (update for Windows if needed)
 pytesseract.pytesseract.tesseract_cmd = r'/usr/bin/tesseract'
