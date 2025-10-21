@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Quick Calendar</title>
+    <style>
+      body { font: 14px system-ui, sans-serif; margin: 12px; width: 320px; }
+      label { display:block; margin-top: 8px; }
+      input, textarea, button { width:100%; box-sizing:border-box; }
+      .row { display:flex; gap:8px; }
+      .row > div { flex:1; }
+      .status { margin-top:10px; min-height:1.2em; }
+    </style>
+  </head>
+  <body>
+    <button id="authBtn">Authenticate with Google Calendar</button>
+    <h3>Add Event</h3>
+    <form id="eventForm">
+      <label>Title
+        <input type="text" name="title" required />
+      </label>
+      <div class="row">
+        <div>
+          <label>Date
+            <input type="date" name="date" required />
+          </label>
+        </div>
+        <div>
+          <label>Start
+            <input type="time" name="start" required />
+          </label>
+        </div>
+        <div>
+          <label>End
+            <input type="time" name="end" required />
+          </label>
+        </div>
+      </div>
+      <label>Description
+        <textarea name="description" rows="3"></textarea>
+      </label>
+      <button type="submit">Create Event</button>
+      <div class="status" id="status"></div>
+    </form>
+    <script src="popup.js"></script>
+  </body>
+</html>

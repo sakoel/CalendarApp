@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Quick Calendar",
+  "version": "0.1.0",
+  "action": {
+    "default_title": "Quick Calendar",
+    "default_popup": "popup.html"
+  },
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://calendarapp-9jvu.onrender.com/*"
+  ],
+  "icons": {
+    "16": "icons/16.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  }
+}

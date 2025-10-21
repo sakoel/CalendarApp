@@ -34,6 +34,14 @@ def get_flow(redirect_uri):
         redirect_uri=redirect_uri
     )
 
+OCR_ENABLED = os.environ.get("OCR_ENABLED", "0") == "1"
+try:
+    if OCR_ENABLED:
+        from PIL import Image
+        import pytesseract
+except Exception as _e:
+    OCR_ENABLED = False
+
 @app.route('/api/authenticate', methods=['GET'])
 def authenticate():
     try:
@@ -107,47 +115,72 @@ def create_event():
 
     try:
         service = build('calendar', 'v3', credentials=creds)
-        if 'image' in request.files:
-            image = Image.open(request.files['image'])
-            text = pytesseract.image_to_string(image)
-            print(f"OCR Extracted Text: {text}")
-            # Simple regex to find date and time in the format YYYY-MM-DD and HH:MM
-            date_match = re.search(r'(\d{4}-\d{2}-\d{2})', text)
-            time_match = re.search(r'(\d{2}:\d{2})', text)
-            description_match = re.search(r'Description:\s*(.*)', text)
-            if date_match and time_match and description_match:
-                date = date_match.group(1)
-                time = time_match.group(1)
-                description = description_match.group(1).strip()
-                event = {
-                    'summary': description,
-                    'start': {
-                        'dateTime': f"{date}T{time}:00",
-                        'timeZone': 'UTC'
-                    },
-                    'end': {
-                        'dateTime': f"{date}T{time}:00",
-                        'timeZone': 'UTC'
-                    },
-                }
-        # If no image, expect form data
+        event = None  # define up front
+
+        # --- If OCR is enabled and an image is provided ---
+        if OCR_ENABLED and 'image' in request.files:
+            try:
+                image = Image.open(request.files['image'])
+                text = pytesseract.image_to_string(image)
+                print(f"OCR Extracted Text: {text}")
+
+                # Simple regex to find date, time, and description
+                date_match = re.search(r'(\d{4}-\d{2}-\d{2})', text)
+                time_match = re.search(r'(\d{2}:\d{2})', text)
+                description_match = re.search(r'Description:\s*(.*)', text)
+
+                if date_match and time_match and description_match:
+                    date = date_match.group(1)
+                    time_ = time_match.group(1)
+                    description = description_match.group(1).strip()
+                    event = {
+                        'summary': description,
+                        'start': {
+                            'dateTime': f"{date}T{time_}:00",
+                            'timeZone': 'UTC'
+                        },
+                        'end': {
+                            'dateTime': f"{date}T{time_}:00",
+                            'timeZone': 'UTC'
+                        },
+                    }
+                else:
+                    return jsonify({'error': 'Could not parse date/time/description from image'}), 400
+
+            except Exception as ocr_err:
+                print("OCR error:", ocr_err)
+                return jsonify({'error': 'OCR failed'}), 400
+
+        # --- Otherwise, expect form data or JSON ---
         else:
+            data = request.get_json(silent=True) or request.form
+            date = data.get('date')
+            time_ = data.get('time')
+            description = data.get('description')
+
+            if not (date and time_ and description):
+                return jsonify({'error': 'Missing fields: date, time, description'}), 400
+
             event = {
-                'summary': request.form.get('description'),
+                'summary': description,
                 'start': {
-                    'dateTime': f"{request.form.get('date')}T{request.form.get('time')}:00",
+                    'dateTime': f"{date}T{time_}:00",
                     'timeZone': 'UTC'
                 },
                 'end': {
-                    'dateTime': f"{request.form.get('date')}T{request.form.get('time')}:00",
+                    'dateTime': f"{date}T{time_}:00",
                     'timeZone': 'UTC'
                 },
             }
-        event = service.events().insert(calendarId='primary', body=event).execute() # this line makes the event
-        return jsonify({'success': True, 'eventLink': event.get('htmlLink')})
+
+        # --- Create the event in Google Calendar ---
+        created_event = service.events().insert(calendarId='primary', body=event).execute()
+        return jsonify({'success': True, 'eventLink': created_event.get('htmlLink')}), 200
+
     except Exception as e:
-        print(f"Error creating event: Enter all data! {e}")
+        print(f"Error creating event: {e}")
         return jsonify({'error': 'Enter all data!'}), 500
+
 
 if __name__ == '__main__':
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
