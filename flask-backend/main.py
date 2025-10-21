@@ -10,9 +10,29 @@ import os
 import requests
 import json
 
+import jwt, datetime
+from db import save_user_creds, get_user_creds
+from google.oauth2 import id_token as google_id_token
+from google.auth.transport import requests as google_requests
+from google.oauth2 import credentials as google_creds
+
+from werkzeug.middleware.proxy_fix import ProxyFix
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+app.config.update(PREFERRED_URL_SCHEME="https")
+
 # --- Configuration ---
 app = Flask(__name__)
-CORS(app, origins=["https://calendar-app-henna-five.vercel.app"])
+CORS(app, resources={
+    r"/api/*": {
+        "origins": [
+            "https://calendar-app-henna-five.vercel.app",
+            "chrome-extension://<YOUR_EXTENSION_ID>"
+        ],
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "max_age": 86400
+    }
+})
 app.secret_key = os.environ.get("SECRET_KEY", "default-secret-key")
 
 # Tesseract OCR path (update for Windows if needed)
@@ -26,6 +46,10 @@ CLIENT_SECRETS_FILE = json.loads(os.environ.get("CLIENT_SECRET_JSON"))
 SCOPES = ['https://www.googleapis.com/auth/calendar']
 REDIRECT_URI = '/oauth2callback'
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://calendar-app-henna-five.vercel.app/")
+
+JWT_SECRET = os.environ.get("JWT_SECRET", "dev-secret")
+JWT_ALG = "HS256"
+SCOPES = ['https://www.googleapis.com/auth/calendar']
 
 def get_flow(redirect_uri):
     return Flow.from_client_config(
@@ -45,35 +69,50 @@ except Exception as _e:
 @app.route('/api/authenticate', methods=['GET'])
 def authenticate():
     try:
-        redirect_uri = url_for('oauth2callback', _external=True)
+        redirect_uri = url_for('oauth2callback', _external=True, _scheme='https')
         flow = get_flow(redirect_uri)
         authorization_url, state = flow.authorization_url(
-            access_type='offline',  # Request offline access
-            prompt='consent',       # Force re-authentication
-            include_granted_scopes='true'
+            access_type='offline', prompt='consent', include_granted_scopes='true'
         )
         session['state'] = state
         return redirect(authorization_url)
     except Exception as e:
-        print(f"Error during authentication: {e}")
-        return jsonify({'error': 'Authentication failed!'}), 500
+        print("Auth setup error:", e)
+        return jsonify({'error': f'Auth not configured: {e}'}), 500
 
 @app.route(REDIRECT_URI)
 def oauth2callback():
-    state = session.get('state')
-    redirect_uri = url_for('oauth2callback', _external=True)
+    redirect_uri = url_for('oauth2callback', _external=True, _scheme='https')
     flow = get_flow(redirect_uri)
     flow.fetch_token(authorization_response=request.url)
     creds = flow.credentials
+
+    # Identify Google user
     try:
-        with open('token.json', 'w') as token:
-            token.write(creds.to_json())
-    except Exception as e:
-        print("Could not save token.json:", e)
-        return jsonify({"error": "Could not save token.json, but calendar may still work."})
-    session['credentials'] = creds.to_json()
-    # Redirect to your frontend after authentication
-    return redirect(FRONTEND_URL + "?authenticated=true")
+        req = google_requests.Request()
+        idinfo = google_id_token.verify_oauth2_token(
+            creds.id_token, req, CLIENT_SECRETS_FILE["web"]["client_id"]
+        )
+        sub = idinfo["sub"]
+        email = idinfo.get("email", "")
+    except Exception:
+        # Fallback if id_token missing
+        sub, email = "unknown", ""
+
+    # Persist this user's Google creds
+    save_user_creds(sub, email, creds.to_json())
+
+    # Issue your short-lived app token
+    app_token = issue_app_token(sub, email)
+
+    # Simple success page that shows the token and lets users copy it
+    return f"""<!doctype html><meta charset="utf-8">
+    <h3>Signed in as {email}</h3>
+    <p>Copy this token into the extension (Settings → Token):</p>
+    <textarea id=t rows=4 cols=80>{app_token}</textarea>
+    <p><button onclick="navigator.clipboard.writeText(document.getElementById('t').value)">Copy</button></p>
+    <p>You can close this tab.</p>
+    """
 
 def load_credentials():
     if os.path.exists('token.json'):
@@ -109,77 +148,72 @@ def logout():
 
 @app.route('/api/create_event', methods=['POST'])
 def create_event():
-    creds = load_credentials()
+    creds = load_user_credentials_for(request.user_sub)
     if not creds:
-        return jsonify({'error': 'User not authenticated'}), 401
+        return jsonify({'error': 'User not authenticated with Google'}), 401
 
     try:
         service = build('calendar', 'v3', credentials=creds)
-        event = None  # define up front
 
-        # --- If OCR is enabled and an image is provided ---
-        if OCR_ENABLED and 'image' in request.files:
-            try:
-                image = Image.open(request.files['image'])
-                text = pytesseract.image_to_string(image)
-                print(f"OCR Extracted Text: {text}")
+        data = request.get_json(silent=True) or request.form
+        date = (data.get('date') or '').strip()
+        time_ = (data.get('time') or '').strip()
+        description = (data.get('description') or '').strip()
 
-                # Simple regex to find date, time, and description
-                date_match = re.search(r'(\d{4}-\d{2}-\d{2})', text)
-                time_match = re.search(r'(\d{2}:\d{2})', text)
-                description_match = re.search(r'Description:\s*(.*)', text)
+        if not (date and time_ and description):
+            return jsonify({'error': 'Missing fields: date, time, description'}), 400
 
-                if date_match and time_match and description_match:
-                    date = date_match.group(1)
-                    time_ = time_match.group(1)
-                    description = description_match.group(1).strip()
-                    event = {
-                        'summary': description,
-                        'start': {
-                            'dateTime': f"{date}T{time_}:00",
-                            'timeZone': 'UTC'
-                        },
-                        'end': {
-                            'dateTime': f"{date}T{time_}:00",
-                            'timeZone': 'UTC'
-                        },
-                    }
-                else:
-                    return jsonify({'error': 'Could not parse date/time/description from image'}), 400
+        event = {
+            'summary': description,
+            'start': {'dateTime': f"{date}T{time_}:00", 'timeZone': 'America/Toronto'},
+            'end':   {'dateTime': f"{date}T{time_}:00", 'timeZone': 'America/Toronto'},
+        }
 
-            except Exception as ocr_err:
-                print("OCR error:", ocr_err)
-                return jsonify({'error': 'OCR failed'}), 400
+        created = service.events().insert(calendarId='primary', body=event).execute()
 
-        # --- Otherwise, expect form data or JSON ---
-        else:
-            data = request.get_json(silent=True) or request.form
-            date = data.get('date')
-            time_ = data.get('time')
-            description = data.get('description')
+        # Optional: save refreshed creds if they changed
+        try:
+            save_user_creds(request.user_sub, request.user_email, creds.to_json())
+        except Exception:
+            pass
 
-            if not (date and time_ and description):
-                return jsonify({'error': 'Missing fields: date, time, description'}), 400
-
-            event = {
-                'summary': description,
-                'start': {
-                    'dateTime': f"{date}T{time_}:00",
-                    'timeZone': 'UTC'
-                },
-                'end': {
-                    'dateTime': f"{date}T{time_}:00",
-                    'timeZone': 'UTC'
-                },
-            }
-
-        # --- Create the event in Google Calendar ---
-        created_event = service.events().insert(calendarId='primary', body=event).execute()
-        return jsonify({'success': True, 'eventLink': created_event.get('htmlLink')}), 200
-
+        return jsonify({'success': True, 'eventLink': created.get('htmlLink')}), 200
     except Exception as e:
-        print(f"Error creating event: {e}")
+        print("Error creating event:", e)
         return jsonify({'error': 'Enter all data!'}), 500
+    
+def issue_app_token(sub: str, email: str):
+    now = datetime.datetime.utcnow()
+    payload = {
+        "sub": sub,
+        "email": email,
+        "iat": int(now.timestamp()),
+        "exp": int((now + datetime.timedelta(hours=24)).timestamp())  # 24h
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALG)
+
+def require_bearer(func):
+    from functools import wraps
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        auth = request.headers.get("Authorization", "")
+        if not auth.startswith("Bearer "):
+            return jsonify({"error": "missing bearer token"}), 401
+        token = auth.split(" ", 1)[1]
+        try:
+            claims = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])
+            request.user_sub = claims["sub"]
+            request.user_email = claims.get("email")
+        except Exception:
+            return jsonify({"error": "invalid/expired token"}), 401
+        return func(*args, **kwargs)
+    return wrapper
+
+def load_user_credentials_for(sub: str):
+    stored = get_user_creds(sub)
+    if not stored:
+        return None
+    return google_creds.Credentials.from_authorized_user_info(stored, SCOPES)
 
 
 if __name__ == '__main__':

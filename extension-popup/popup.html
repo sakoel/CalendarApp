@@ -1,47 +1,30 @@
+<!-- extension-popup/popup.html -->
 <!doctype html>
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Quick Calendar</title>
+    <title>Quick Add</title>
     <style>
-      body { font: 14px system-ui, sans-serif; margin: 12px; width: 320px; }
-      label { display:block; margin-top: 8px; }
-      input, textarea, button { width:100%; box-sizing:border-box; }
-      .row { display:flex; gap:8px; }
-      .row > div { flex:1; }
-      .status { margin-top:10px; min-height:1.2em; }
+      body { font-family: system-ui, sans-serif; width: 320px; padding: 10px; }
+      input, button, textarea { width: 100%; margin-top: 8px; padding: 6px; }
     </style>
   </head>
   <body>
-    <button id="authBtn">Authenticate with Google Calendar</button>
-    <h3>Add Event</h3>
-    <form id="eventForm">
-      <label>Title
-        <input type="text" name="title" required />
-      </label>
-      <div class="row">
-        <div>
-          <label>Date
-            <input type="date" name="date" required />
-          </label>
-        </div>
-        <div>
-          <label>Start
-            <input type="time" name="start" required />
-          </label>
-        </div>
-        <div>
-          <label>End
-            <input type="time" name="end" required />
-          </label>
-        </div>
-      </div>
-      <label>Description
-        <textarea name="description" rows="3"></textarea>
-      </label>
-      <button type="submit">Create Event</button>
-      <div class="status" id="status"></div>
-    </form>
+    <h2>Add to Calendar</h2>
+
+    <button id="signIn">Sign In</button>
+
+    <input id="token" placeholder="Paste your token here" />
+    <button id="saveToken">Save Token</button>
+
+    <hr>
+
+    <input id="date" type="date" />
+    <input id="time" type="time" />
+    <textarea id="description" placeholder="Description"></textarea>
+    <button id="createBtn">Create Event</button>
+
+    <!-- put script LAST so elements exist -->
     <script src="popup.js"></script>
   </body>
 </html>
